@@ -38,6 +38,7 @@ static void use_physical(const struct libbiosdevname_state *state, const char *p
 	unsigned int portnum=0;
 	int known=0;
 	struct pci_device *vf;
+	int offset = 0;
 
 	list_for_each_entry(dev, &state->bios_devices, node) {
 		known = 0;
@@ -55,14 +56,17 @@ static void use_physical(const struct libbiosdevname_state *state, const char *p
 					vf = vf->vpd_pf;
 				if (vf->pf)
 				  	vf = vf->pf;
-				if (dev->port)
-					portnum = dev->port->port;
+				if (dev->port) {
+					if (dev->port->port > 1)
+						offset++;
+					portnum = offset + (vf->embedded_index_valid ? vf->embedded_index : 1);
+				}
 				else if (vf->uses_sysfs & HAS_SYSFS_INDEX)
-					portnum = vf->sysfs_index;
+					portnum = offset + vf->sysfs_index;
 				else if (vf->uses_smbios & HAS_SMBIOS_INSTANCE && is_pci_smbios_type_ethernet(vf))
-					portnum = vf->smbios_instance;
+					portnum = offset + vf->smbios_instance;
 				else if (vf->embedded_index_valid)
-					portnum = vf->embedded_index;
+					portnum = offset + vf->embedded_index;
 				if (portnum != INT_MAX) {	
 					snprintf(location, sizeof(location), "%s%u", prefix, portnum);
 					known=1;
